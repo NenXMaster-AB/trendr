@@ -1,0 +1,21 @@
+{
+  "name": "YouTube \u2192 Transcript \u2192 Tweets+LinkedIn+Blog",
+  "nodes": [
+    {
+      "id": "ingest_youtube",
+      "type": "task",
+      "task": "ingest_youtube"
+    },
+    {
+      "id": "generate_posts",
+      "type": "task",
+      "task": "generate_posts"
+    }
+  ],
+  "edges": [
+    {
+      "from": "ingest_youtube",
+      "to": "generate_posts"
+    }
+  ]
+}

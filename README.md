@@ -1,0 +1,97 @@
+# Trendr (Skeleton)
+
+Trendr is a modular content creation platform that ingests source content (e.g., YouTube), extracts intelligence (transcripts, topics),
+and generates multi-platform outputs (tweets, LinkedIn, blog drafts) plus media assets (thumbnails, icons) via pluggable AI providers.
+
+This repo is a **runnable skeleton** (monorepo) with:
+- **Backend**: FastAPI + Postgres + Redis + Celery worker
+- **Frontend**: Next.js (App Router) + Tailwind + shadcn/ui (light starter)
+- **Plugin system**: Provider abstraction + local plugin registry (OpenAI/NanoBanana stubs)
+- **Workflow scaffolding**: Workflow definitions + execution stubs
+- **Jobs**: async jobs via Celery; API exposes job status
+
+> This is intentionally minimal: core contracts, folder layout, and a clean runway for building.
+
+## Quickstart (Docker)
+
+1) Copy env templates:
+```bash
+cp backend/.env.example backend/.env
+cp frontend/.env.local.example frontend/.env.local
+```
+
+2) Start everything:
+```bash
+docker compose up --build
+```
+
+3) Open:
+- Frontend: http://localhost:3000
+- Backend docs: http://localhost:8000/docs
+
+## Local Dev (without Docker)
+
+### Backend
+```bash
+cd backend
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn trendr_api.main:app --reload --port 8000
+```
+
+### Worker
+```bash
+cd backend
+source .venv/bin/activate
+celery -A trendr_api.worker.celery_app worker --loglevel=INFO
+```
+
+### Frontend
+```bash
+cd frontend
+npm i
+npm run dev
+```
+
+## Core Concepts
+
+### Projects
+A Project represents a content source + generated artifacts.
+
+### Ingestion
+`POST /v1/ingest/youtube` creates a job that:
+- fetches metadata (stub)
+- pulls transcript (stub)
+- stores transcript + segments
+
+### Generation
+`POST /v1/generate` creates a job that:
+- selects templates + tone/voice
+- calls text provider plugin (stub)
+- stores generated drafts
+
+### Plugins
+Providers live in `backend/trendr_api/plugins/`. Add new ones by implementing:
+- `TextProvider`
+- `ImageProvider`
+
+### Workflows
+Workflows are simple JSON definitions (nodes + edges) in `backend/trendr_api/workflows/`.
+Execution is currently stubbed; wire nodes to Celery tasks as you build.
+
+## Next Steps
+- Implement real YouTube transcript fetch (yt-dlp / YouTube Transcript API / official API)
+- Add auth (Clerk/Auth.js/Keycloak) and multi-tenant workspaces
+- Add scheduler + publishing integrations
+- Add brand voice memory (RAG + embeddings)
+- Add analytics collectors + dashboards
+
+---
+
+**Repo layout**
+```
+trendr/
+  backend/
+  frontend/
+  docker-compose.yml
+```
