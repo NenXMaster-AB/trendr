@@ -60,15 +60,16 @@ A Project represents a content source + generated artifacts.
 
 ### Ingestion
 `POST /v1/ingest/youtube` creates a job that:
-- fetches metadata (stub)
-- pulls transcript (stub)
-- stores transcript + segments
+- fetches metadata via YouTube oEmbed (best-effort)
+- pulls transcript via `youtube-transcript-api` with URL parsing + fallbacks
+- stores transcript + segments (or records a clear `job.error` on failure)
 
 ### Generation
 `POST /v1/generate` creates a job that:
-- selects templates + tone/voice
+- loads filesystem templates per output kind (`tweet`, `linkedin`, `blog`)
+- applies tone/voice + anti-cliche writing constraints
 - calls text provider plugin (stub)
-- stores generated drafts
+- stores separate draft artifacts by kind
 
 ### Plugins
 Providers live in `backend/trendr_api/plugins/`. Add new ones by implementing:
@@ -80,11 +81,16 @@ Workflows are simple JSON definitions (nodes + edges) in `backend/trendr_api/wor
 Execution is currently stubbed; wire nodes to Celery tasks as you build.
 
 ## Next Steps
-- Implement real YouTube transcript fetch (yt-dlp / YouTube Transcript API / official API)
+- Add transcript fallback path for blocked environments (cookies/proxy or `yt-dlp` subtitle fallback)
+- Expand Project Detail UX (artifact kind tabs, richer generate options, filtering)
+- Add backend tests (`video_id`, templates, generation, artifact patch, jobs list)
+- Add minimal CI (backend tests + frontend build)
 - Add auth (Clerk/Auth.js/Keycloak) and multi-tenant workspaces
 - Add scheduler + publishing integrations
 - Add brand voice memory (RAG + embeddings)
 - Add analytics collectors + dashboards
+
+For exact handoff status and next-session checklist, see `docs/SESSION_HANDOFF.md`.
 
 ---
 
