@@ -10,15 +10,28 @@ type Project = {
   source_ref: string;
 };
 
+type Job = {
+  id: number;
+  kind: string;
+  status: string;
+  project_id?: number | null;
+  error?: string | null;
+};
+
 export default function Dashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [url, setUrl] = useState("");
   const [jobId, setJobId] = useState<number | null>(null);
   const [job, setJob] = useState<any>(null);
 
   async function refresh() {
-    const data = await api.get<Project[]>("/v1/projects");
-    setProjects(data);
+    const [projectData, jobData] = await Promise.all([
+      api.get<Project[]>("/v1/projects"),
+      api.get<Job[]>("/v1/jobs?limit=10"),
+    ]);
+    setProjects(projectData);
+    setJobs(jobData);
   }
 
   useEffect(() => {
@@ -88,6 +101,29 @@ export default function Dashboard() {
             </a>
           ))}
           {projects.length === 0 && <div className="text-sm text-zinc-400">No projects yet.</div>}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-zinc-800 p-6">
+        <h2 className="text-lg font-semibold">Recent Jobs</h2>
+        <div className="mt-3 space-y-2">
+          {jobs.map((j) => (
+            <a
+              key={j.id}
+              href={j.project_id ? `/projects/${j.project_id}` : "#"}
+              className="block rounded-xl border border-zinc-800 bg-zinc-950/40 p-3 hover:bg-zinc-950"
+            >
+              <div className="text-sm font-medium">
+                #{j.id} • {j.kind}
+              </div>
+              <div className="text-xs text-zinc-400">
+                status: {j.status}
+                {j.project_id ? ` • project ${j.project_id}` : ""}
+              </div>
+              {j.error ? <div className="mt-1 text-xs text-red-300">{j.error}</div> : null}
+            </a>
+          ))}
+          {jobs.length === 0 && <div className="text-sm text-zinc-400">No jobs yet.</div>}
         </div>
       </div>
     </div>

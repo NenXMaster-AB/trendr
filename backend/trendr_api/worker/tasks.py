@@ -4,7 +4,7 @@ from celery import shared_task
 from sqlmodel import Session, select
 
 from ..db import engine
-from ..models import Job, Project, Artifact
+from ..models import Artifact, Job
 from ..services.ingest import fetch_youtube_metadata, fetch_youtube_transcript
 from ..services.generate import generate_text_output
 
@@ -30,7 +30,9 @@ def ingest_youtube(job_id: int):
 
         try:
             url = job.input.get("url")
-            meta = session.exec(select(Project).where(Project.id == job.project_id)).first()
+            if not isinstance(url, str) or not url.strip():
+                raise ValueError("Missing 'url' in ingest job payload")
+
             yt_meta = _run_async(fetch_youtube_metadata(url))
             transcript = _run_async(fetch_youtube_transcript(url))
 
@@ -39,10 +41,24 @@ def ingest_youtube(job_id: int):
             session.add(Artifact(project_id=job.project_id, kind="transcript", title="Transcript", content=transcript["text"], meta={"segments": transcript["segments"]}))
             session.commit()
 
-            _update_job(session, job, status="succeeded", output={"youtube": yt_meta, "transcript_chars": len(transcript["text"])})
+            _update_job(
+                session,
+                job,
+                status="succeeded",
+                output={
+                    "youtube": yt_meta,
+                    "transcript_chars": len(transcript["text"]),
+                    "segments": len(transcript["segments"]),
+                },
+            )
             return {"ok": True}
         except Exception as e:
-            _update_job(session, job, status="failed", error=str(e))
+            _update_job(
+                session,
+                job,
+                status="failed",
+                error=f"{e.__class__.__name__}: {e}",
+            )
             return {"ok": False, "error": str(e)}
 
 
@@ -114,18 +130,20 @@ def generate_posts(job_id: int):
             )
             return {"ok": True}
         except Exception as e:
-            _update_job(session, job, status="failed", error=str(e))
+            _update_job(
+                session,
+                job,
+                status="failed",
+                error=f"{e.__class__.__name__}: {e}",
+            )
             return {"ok": False, "error": str(e)}
 
 
 def _run_async(coro):
     """Run an async coroutine in a sync Celery task (skeleton)."""
     import asyncio
+    loop = asyncio.new_event_loop()
     try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            # Rare in Celery, but handle defensively:
-            return asyncio.run(coro)
         return loop.run_until_complete(coro)
-    except RuntimeError:
-        return asyncio.run(coro)
+    finally:
+        loop.close()

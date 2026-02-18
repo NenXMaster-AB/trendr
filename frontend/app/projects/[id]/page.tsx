@@ -1,11 +1,30 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
 
-export default function ProjectPage({ params }: { params: { id: string } }) {
+type Project = {
+  id: number;
+  name: string;
+  source_type: string;
+  source_ref: string;
+};
+
+type Job = {
+  id: number;
+  kind: string;
+  status: string;
+  error?: string | null;
+};
+
+export default function ProjectPage() {
+  const params = useParams<{ id: string }>();
   const projectId = Number(params.id);
+  const hasValidProjectId = Number.isFinite(projectId) && projectId > 0;
+  const [project, setProject] = useState<Project | null>(null);
   const [artifacts, setArtifacts] = useState<any[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [jobId, setJobId] = useState<number | null>(null);
   const [job, setJob] = useState<any>(null);
   const [editingArtifactId, setEditingArtifactId] = useState<number | null>(null);
@@ -13,13 +32,21 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   const [isSaving, setIsSaving] = useState(false);
 
   async function refresh() {
-    const a = await api.get<any[]>(`/v1/artifacts?project_id=${projectId}`);
-    setArtifacts(a);
+    if (!hasValidProjectId) return;
+    const [projectData, artifactData, jobData] = await Promise.all([
+      api.get<Project>(`/v1/projects/${projectId}`),
+      api.get<any[]>(`/v1/artifacts?project_id=${projectId}`),
+      api.get<Job[]>(`/v1/jobs?project_id=${projectId}&limit=20`),
+    ]);
+    setProject(projectData);
+    setArtifacts(artifactData);
+    setJobs(jobData);
   }
 
   useEffect(() => {
+    if (!hasValidProjectId) return;
     refresh();
-  }, [projectId]);
+  }, [projectId, hasValidProjectId]);
 
   useEffect(() => {
     if (!jobId) return;
@@ -35,6 +62,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   }, [jobId]);
 
   async function generate() {
+    if (!hasValidProjectId) return;
     setJob(null);
     const j = await api.post("/v1/generate", {
       project_id: projectId,
@@ -67,9 +95,19 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
 
   return (
     <div className="space-y-6">
+      {!hasValidProjectId ? (
+        <div className="rounded-2xl border border-red-800 bg-red-950/30 p-6 text-sm text-red-200">
+          Invalid project id in route.
+        </div>
+      ) : null}
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold">Project #{projectId}</h1>
+          <div>
+            <h1 className="text-2xl font-semibold">{project?.name ?? `Project #${projectId}`}</h1>
+            <div className="mt-1 text-xs text-zinc-400">
+              {project?.source_type ?? "youtube"} • {project?.source_ref ?? "loading..."}
+            </div>
+          </div>
           <button onClick={generate} className="rounded-xl bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-950">
             Generate Posts
           </button>
@@ -82,6 +120,20 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
             {job?.error ? <div className="mt-2 text-red-300">Error: {job.error}</div> : null}
           </div>
         )}
+      </div>
+
+      <div className="rounded-2xl border border-zinc-800 p-6">
+        <h2 className="text-lg font-semibold">Jobs</h2>
+        <div className="mt-3 space-y-2">
+          {jobs.map((j) => (
+            <div key={j.id} className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-3">
+              <div className="text-sm font-medium">#{j.id} • {j.kind}</div>
+              <div className="text-xs text-zinc-400">status: {j.status}</div>
+              {j.error ? <div className="mt-1 text-xs text-red-300">{j.error}</div> : null}
+            </div>
+          ))}
+          {jobs.length === 0 && <div className="text-sm text-zinc-400">No jobs yet.</div>}
+        </div>
       </div>
 
       <div className="rounded-2xl border border-zinc-800 p-6">
