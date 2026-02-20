@@ -34,6 +34,22 @@ def test_build_prompt_includes_core_context():
     assert "Avoid buzzwords" in prompt
 
 
+def test_build_prompt_uses_template_override():
+    prompt = build_prompt(
+        transcript="This is the transcript.",
+        segments=[{"start": 0.0, "end": 2.0, "text": "Key line"}],
+        output_kind="tweet",
+        tone="professional",
+        brand_voice="sharp and direct",
+        audience="Founders",
+        notes="Avoid buzzwords",
+        template_content="Tone={tone}\\nTranscript={transcript}\\nSegments={segments}",
+    )
+    assert "Tone=professional" in prompt
+    assert "Transcript=This is the transcript." in prompt
+    assert "Key line" in prompt
+
+
 @pytest.mark.asyncio
 async def test_generate_text_output_calls_provider_with_expected_meta(monkeypatch):
     fake_provider = FakeTextProvider()
@@ -51,6 +67,10 @@ async def test_generate_text_output_calls_provider_with_expected_meta(monkeypatc
         brand_voice="precise",
         provider_name="openai",
         meta={"audience": "PMs", "notes": "Use concrete examples"},
+        template_content=(
+            "Tone={tone}\\nAudience={audience}\\nTranscript={transcript}\\n"
+            "Segments={segments}"
+        ),
     )
 
     assert result == "fake-output"

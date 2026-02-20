@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from ..auth import AuthContext, require_auth
 from ..db import get_session
-from ..models import Project, Job
+from ..models import Project, Job, Template
 from ..schemas import GenerateRequest, JobOut
 from ..worker import tasks
 
@@ -22,6 +22,29 @@ def generate(
     ).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+
+    if payload.template_id is not None:
+        template = session.exec(
+            select(Template).where(
+                Template.id == payload.template_id,
+                Template.workspace_id == actor.workspace_id,
+            )
+        ).first()
+        if not template:
+            raise HTTPException(status_code=404, detail="Template not found")
+
+        incompatible_output = next(
+            (output for output in payload.outputs if output != template.kind),
+            None,
+        )
+        if incompatible_output is not None:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Template kind '{template.kind}' does not match output "
+                    f"'{incompatible_output}'"
+                ),
+            )
 
     job = Job(
         kind="generate",

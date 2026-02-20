@@ -15,8 +15,9 @@ def build_prompt(
     brand_voice: Optional[str],
     audience: Optional[str],
     notes: Optional[str],
+    template_content: Optional[str] = None,
 ) -> str:
-    template = load_template(output_kind)
+    template = template_content or load_template(output_kind)
     writing_constraints = build_writing_constraints(
         output_kind=output_kind,
         tone=tone,
@@ -50,6 +51,7 @@ async def generate_text_output(
     brand_voice: Optional[str],
     provider_name: str = "openai",
     meta: Optional[Dict[str, Any]] = None,
+    template_content: Optional[str] = None,
 ) -> str:
     provider = registry.get_text(provider_name)
     prompt_meta = meta or {}
@@ -61,6 +63,7 @@ async def generate_text_output(
         brand_voice=brand_voice,
         audience=prompt_meta.get("audience"),
         notes=prompt_meta.get("notes"),
+        template_content=template_content,
     )
     return await provider.generate(
         prompt=prompt,

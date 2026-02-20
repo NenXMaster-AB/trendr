@@ -1,6 +1,7 @@
 from __future__ import annotations
 from pydantic import BaseModel, HttpUrl, Field
 from typing import Optional, Dict, Any, List, Literal
+from datetime import datetime
 
 
 class ProjectCreate(BaseModel):
@@ -27,6 +28,7 @@ class GenerateRequest(BaseModel):
     outputs: List[Literal["tweet", "linkedin", "blog"]] = Field(default_factory=lambda: ["tweet", "linkedin", "blog"])
     tone: str = "professional"
     brand_voice: Optional[str] = None
+    template_id: Optional[int] = None
     meta: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -46,3 +48,29 @@ class ArtifactUpdate(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None
     meta: Optional[Dict[str, Any]] = None
+
+
+class TemplateCreate(BaseModel):
+    name: str
+    kind: Literal["tweet", "linkedin", "blog"]
+    content: str
+    meta: Dict[str, Any] = Field(default_factory=dict)
+    version: Optional[int] = None
+
+
+class TemplateUpdate(BaseModel):
+    name: Optional[str] = None
+    kind: Optional[Literal["tweet", "linkedin", "blog"]] = None
+    content: Optional[str] = None
+    meta: Optional[Dict[str, Any]] = None
+
+
+class TemplateOut(BaseModel):
+    id: int
+    workspace_id: int
+    name: str
+    kind: Literal["tweet", "linkedin", "blog"]
+    version: int
+    content: str
+    meta: Dict[str, Any]
+    created_at: datetime

@@ -4,7 +4,7 @@ from celery import shared_task
 from sqlmodel import Session, select
 
 from ..db import engine
-from ..models import Artifact, Job
+from ..models import Artifact, Job, Template
 from ..services.ingest import fetch_youtube_metadata, fetch_youtube_transcript
 from ..services.generate import generate_text_output
 
@@ -94,9 +94,25 @@ def generate_posts(job_id: int):
             outputs = payload.get("outputs", ["tweet", "linkedin", "blog"])
             tone = payload.get("tone", "professional")
             brand_voice = payload.get("brand_voice")
+            template_id = payload.get("template_id")
 
             if not project_id:
                 raise ValueError("Missing project_id for generation job")
+
+            template = None
+            if template_id is not None:
+                try:
+                    template_id_int = int(template_id)
+                except (TypeError, ValueError):
+                    raise ValueError("Invalid template_id")
+                template = session.exec(
+                    select(Template).where(
+                        Template.id == template_id_int,
+                        Template.workspace_id == job.workspace_id,
+                    )
+                ).first()
+                if not template:
+                    raise ValueError(f"Template {template_id_int} not found")
 
             # Get transcript
             transcript_art = session.exec(
@@ -116,6 +132,10 @@ def generate_posts(job_id: int):
 
             created_artifact_ids = []
             for output_kind in outputs:
+                if template is not None and output_kind != template.kind:
+                    raise ValueError(
+                        f"Template kind '{template.kind}' does not match output '{output_kind}'"
+                    )
                 text = _run_async(
                     generate_text_output(
                         transcript=transcript,
@@ -125,6 +145,7 @@ def generate_posts(job_id: int):
                         brand_voice=brand_voice,
                         provider_name="openai",
                         meta=payload.get("meta"),
+                        template_content=template.content if template else None,
                     )
                 )
                 artifact = Artifact(
@@ -133,7 +154,12 @@ def generate_posts(job_id: int):
                     kind=output_kind,
                     title=f"{output_kind.title()} Draft",
                     content=text,
-                    meta={"tone": tone, "brand_voice": brand_voice},
+                    meta={
+                        "tone": tone,
+                        "brand_voice": brand_voice,
+                        "template_id": template.id if template else None,
+                        "template_version": template.version if template else None,
+                    },
                 )
                 session.add(artifact)
                 session.flush()
@@ -149,6 +175,7 @@ def generate_posts(job_id: int):
                     "generated": True,
                     "outputs": outputs,
                     "artifact_ids": created_artifact_ids,
+                    "template_id": template.id if template else None,
                 },
             )
             return {"ok": True}

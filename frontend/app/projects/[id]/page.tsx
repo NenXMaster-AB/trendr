@@ -28,6 +28,12 @@ type Artifact = {
 
 type OutputKind = "tweet" | "linkedin" | "blog";
 type ArtifactTab = "all" | "transcript" | "tweet" | "linkedin" | "blog";
+type Template = {
+  id: number;
+  name: string;
+  kind: OutputKind;
+  version: number;
+};
 
 const TABS: Array<{ key: ArtifactTab; label: string }> = [
   { key: "all", label: "All" },
@@ -64,6 +70,8 @@ export default function ProjectPage() {
   const [brandVoice, setBrandVoice] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
 
   async function refresh() {
     if (!hasValidProjectId) return;
@@ -110,6 +118,42 @@ export default function ProjectPage() {
       ),
     [selectedOutputs],
   );
+  const isSingleOutputSelected = selectedOutputKinds.length === 1;
+
+  useEffect(() => {
+    if (!isGenerateModalOpen) return;
+    if (!isSingleOutputSelected) {
+      setTemplates([]);
+      setSelectedTemplateId(null);
+      return;
+    }
+
+    const outputKind = selectedOutputKinds[0];
+    let cancelled = false;
+    (async () => {
+      try {
+        const rows = await api.get<Template[]>(`/v1/templates?kind=${outputKind}`);
+        if (!cancelled) {
+          setTemplates(rows);
+          setSelectedTemplateId((prev) => {
+            if (prev && rows.some((row) => row.id === prev)) {
+              return prev;
+            }
+            return null;
+          });
+        }
+      } catch {
+        if (!cancelled) {
+          setTemplates([]);
+          setSelectedTemplateId(null);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isGenerateModalOpen, isSingleOutputSelected, selectedOutputKinds]);
 
   function toggleOutput(kind: OutputKind) {
     setSelectedOutputs((prev) => ({ ...prev, [kind]: !prev[kind] }));
@@ -132,6 +176,7 @@ export default function ProjectPage() {
         outputs: selectedOutputKinds,
         tone,
         brand_voice: brandVoice.trim() || null,
+        template_id: selectedTemplateId,
       });
       setJobId(j.id);
       setIsGenerateModalOpen(false);
@@ -337,6 +382,35 @@ export default function ProjectPage() {
                   </label>
                 ))}
               </div>
+            </div>
+
+            <div className="mt-4">
+              <label className="mb-2 block text-xs font-medium text-zinc-300" htmlFor="template-select">
+                Template
+              </label>
+              <select
+                id="template-select"
+                value={selectedTemplateId ?? ""}
+                onChange={(e) =>
+                  setSelectedTemplateId(
+                    e.target.value === "" ? null : Number(e.target.value),
+                  )
+                }
+                disabled={!isSingleOutputSelected}
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 disabled:opacity-60"
+              >
+                <option value="">Built-in template (default)</option>
+                {templates.map((template) => (
+                  <option key={template.id} value={template.id}>
+                    {template.name} (v{template.version})
+                  </option>
+                ))}
+              </select>
+              {!isSingleOutputSelected ? (
+                <p className="mt-2 text-xs text-zinc-400">
+                  Select exactly one output to use a saved template.
+                </p>
+              ) : null}
             </div>
 
             <div className="mt-4">

@@ -64,3 +64,24 @@ class Job(SQLModel, table=True):
     error: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class Template(SQLModel, table=True):
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id",
+            "name",
+            "kind",
+            "version",
+            name="uq_template_workspace_name_kind_version",
+        ),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    workspace_id: int = Field(foreign_key="workspace.id", index=True)
+    name: str
+    kind: str  # tweet|linkedin|blog
+    version: int = 1
+    content: str
+    meta: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    created_at: datetime = Field(default_factory=datetime.utcnow)
