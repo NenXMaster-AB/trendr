@@ -15,6 +15,7 @@ export function Header() {
         <nav className="flex items-center gap-3 text-sm text-zinc-300">
           <Link className="hover:text-zinc-100" href="/dashboard">Dashboard</Link>
           <Link className="hover:text-zinc-100" href="/templates">Templates</Link>
+          <Link className="hover:text-zinc-100" href="/workflows">Workflows</Link>
           <a className="hover:text-zinc-100" href="http://localhost:8000/docs" target="_blank" rel="noreferrer">API</a>
         </nav>
       </div>
