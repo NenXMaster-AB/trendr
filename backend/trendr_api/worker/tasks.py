@@ -37,8 +37,26 @@ def ingest_youtube(job_id: int):
             transcript = _run_async(fetch_youtube_transcript(url))
 
             # Store artifacts
-            session.add(Artifact(project_id=job.project_id, kind="source_meta", title="YouTube Metadata", content="", meta=yt_meta))
-            session.add(Artifact(project_id=job.project_id, kind="transcript", title="Transcript", content=transcript["text"], meta={"segments": transcript["segments"]}))
+            session.add(
+                Artifact(
+                    workspace_id=job.workspace_id,
+                    project_id=job.project_id,
+                    kind="source_meta",
+                    title="YouTube Metadata",
+                    content="",
+                    meta=yt_meta,
+                )
+            )
+            session.add(
+                Artifact(
+                    workspace_id=job.workspace_id,
+                    project_id=job.project_id,
+                    kind="transcript",
+                    title="Transcript",
+                    content=transcript["text"],
+                    meta={"segments": transcript["segments"]},
+                )
+            )
             session.commit()
 
             _update_job(
@@ -82,7 +100,11 @@ def generate_posts(job_id: int):
 
             # Get transcript
             transcript_art = session.exec(
-                select(Artifact).where(Artifact.project_id == project_id, Artifact.kind == "transcript").order_by(Artifact.id.desc())
+                select(Artifact).where(
+                    Artifact.workspace_id == job.workspace_id,
+                    Artifact.project_id == project_id,
+                    Artifact.kind == "transcript",
+                ).order_by(Artifact.id.desc())
             ).first()
 
             transcript = transcript_art.content if transcript_art else "No transcript found. (Run ingest first.)"
@@ -106,6 +128,7 @@ def generate_posts(job_id: int):
                     )
                 )
                 artifact = Artifact(
+                    workspace_id=job.workspace_id,
                     project_id=project_id,
                     kind=output_kind,
                     title=f"{output_kind.title()} Draft",

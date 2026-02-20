@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
+from ..auth import AuthContext, require_auth
 from ..db import get_session
 from ..models import Project, Job
 from ..schemas import GenerateRequest, JobOut
@@ -8,14 +9,24 @@ from ..worker import tasks
 router = APIRouter(prefix="/generate", tags=["generate"])
 
 @router.post("", response_model=JobOut)
-def generate(payload: GenerateRequest, session: Session = Depends(get_session)):
-    project = session.exec(select(Project).where(Project.id == payload.project_id)).first()
+def generate(
+    payload: GenerateRequest,
+    session: Session = Depends(get_session),
+    actor: AuthContext = Depends(require_auth),
+):
+    project = session.exec(
+        select(Project).where(
+            Project.id == payload.project_id,
+            Project.workspace_id == actor.workspace_id,
+        )
+    ).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
     job = Job(
         kind="generate",
         status="queued",
+        workspace_id=actor.workspace_id,
         project_id=project.id,
         input=payload.model_dump(),
     )

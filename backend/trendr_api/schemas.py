@@ -11,6 +11,7 @@ class ProjectCreate(BaseModel):
 
 class ProjectOut(BaseModel):
     id: int
+    workspace_id: int
     name: str
     source_type: str
     source_ref: str
@@ -33,6 +34,7 @@ class JobOut(BaseModel):
     id: int
     kind: str
     status: str
+    workspace_id: int
     project_id: Optional[int] = None
     task_id: Optional[str] = None
     input: Dict[str, Any]

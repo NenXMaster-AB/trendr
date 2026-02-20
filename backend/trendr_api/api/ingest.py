@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlmodel import Session
+from ..auth import AuthContext, require_auth
 from ..db import get_session
 from ..models import Project, Job
 from ..schemas import IngestYouTubeRequest, JobOut
@@ -8,14 +9,29 @@ from ..worker import tasks
 router = APIRouter(prefix="/ingest", tags=["ingest"])
 
 @router.post("/youtube", response_model=JobOut)
-def ingest_youtube(payload: IngestYouTubeRequest, session: Session = Depends(get_session)):
+def ingest_youtube(
+    payload: IngestYouTubeRequest,
+    session: Session = Depends(get_session),
+    actor: AuthContext = Depends(require_auth),
+):
     name = payload.project_name or "YouTube Import"
-    project = Project(name=name, source_type="youtube", source_ref=str(payload.url))
+    project = Project(
+        workspace_id=actor.workspace_id,
+        name=name,
+        source_type="youtube",
+        source_ref=str(payload.url),
+    )
     session.add(project)
     session.commit()
     session.refresh(project)
 
-    job = Job(kind="ingest", status="queued", project_id=project.id, input={"url": str(payload.url)})
+    job = Job(
+        kind="ingest",
+        status="queued",
+        workspace_id=actor.workspace_id,
+        project_id=project.id,
+        input={"url": str(payload.url)},
+    )
     session.add(job)
     session.commit()
     session.refresh(job)

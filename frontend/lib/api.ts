@@ -1,10 +1,14 @@
 const base = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
+const defaultUserId = process.env.NEXT_PUBLIC_USER_ID ?? "demo-user";
+const defaultWorkspaceSlug = process.env.NEXT_PUBLIC_WORKSPACE_SLUG ?? "default";
 
 async function request(path: string, opts: RequestInit) {
   const res = await fetch(base + path, {
     ...opts,
     headers: {
       "Content-Type": "application/json",
+      "X-User-Id": defaultUserId,
+      "X-Workspace-Slug": defaultWorkspaceSlug,
       ...(opts.headers ?? {})
     }
   });
