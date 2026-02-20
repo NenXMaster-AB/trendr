@@ -100,3 +100,17 @@ class WorkflowRunRequest(BaseModel):
     brand_voice: Optional[str] = None
     template_id: Optional[int] = None
     meta: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ProviderCapabilitiesOut(BaseModel):
+    max_input_tokens: Optional[int] = None
+    max_output_tokens: Optional[int] = None
+    supports_json_mode: bool = False
+    supports_streaming: bool = False
+    supports_system_prompt: bool = True
+
+
+class ProviderOut(BaseModel):
+    name: str
+    available: bool
+    capabilities: ProviderCapabilitiesOut

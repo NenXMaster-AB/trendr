@@ -15,9 +15,17 @@ class Settings(BaseSettings):
     celery_result_backend: str
 
     openai_api_key: str | None = None
+    openai_model: str = "gpt-4o-mini"
+    openai_base_url: str = "https://api.openai.com/v1"
     nanobanana_api_key: str | None = None
+    text_provider_default: str = "openai"
+    text_provider_fallbacks: str = "openai_stub"
 
     jwt_secret: str = "dev-secret-change-me"
+
+    @property
+    def text_provider_fallback_list(self) -> list[str]:
+        return [item.strip() for item in self.text_provider_fallbacks.split(",") if item.strip()]
 
 
 settings = Settings()

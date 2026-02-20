@@ -6,8 +6,8 @@ and generates multi-platform outputs (tweets, LinkedIn, blog drafts) plus media 
 This repo is a **runnable skeleton** (monorepo) with:
 - **Backend**: FastAPI + Postgres + Redis + Celery worker
 - **Frontend**: Next.js (App Router) + Tailwind + shadcn/ui (light starter)
-- **Plugin system**: Provider abstraction + local plugin registry (OpenAI/NanoBanana stubs)
-- **Workflow scaffolding**: Workflow definitions + execution stubs
+- **Plugin system**: Provider abstraction + plugin registry (OpenAI + stub fallback)
+- **Workflow engine v0**: Workflow definitions persisted + runnable DAG jobs
 - **Jobs**: async jobs via Celery; API exposes job status
 
 > This is intentionally minimal: core contracts, folder layout, and a clean runway for building.
@@ -69,7 +69,7 @@ A Project represents a content source + generated artifacts.
 `POST /v1/generate` creates a job that:
 - loads filesystem templates per output kind (`tweet`, `linkedin`, `blog`)
 - applies tone/voice + anti-cliche writing constraints
-- calls text provider plugin (stub)
+- routes through text provider chain (`openai` -> `openai_stub` fallback by default)
 - stores separate draft artifacts by kind
 
 ### Plugins
@@ -78,8 +78,14 @@ Providers live in `backend/trendr_api/plugins/`. Add new ones by implementing:
 - `ImageProvider`
 
 ### Workflows
-Workflows are simple JSON definitions (nodes + edges) in `backend/trendr_api/workflows/`.
-Execution is currently stubbed; wire nodes to Celery tasks as you build.
+Workflows are persisted in DB and executable via:
+- `POST /v1/workflows`
+- `GET /v1/workflows`
+- `POST /v1/workflows/{id}/run`
+
+Current supported workflow tasks:
+- `ingest_youtube`
+- `generate_posts`
 
 ## Next Steps
 - Add transcript fallback path for blocked environments (cookies/proxy or `yt-dlp` subtitle fallback)

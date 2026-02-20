@@ -1,2 +1,2 @@
 from .registry import PluginRegistry, registry
-from .types import TextProvider, ImageProvider
+from .types import ImageProvider, ProviderCapabilities, TextProvider

@@ -1,21 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import Any
 
 import pytest
 
 from trendr_api.services.generate import build_prompt, generate_text_output
-
-
-@dataclass
-class FakeTextProvider:
-    name: str = "fake"
-    calls: list[dict[str, Any]] = field(default_factory=list)
-
-    async def generate(self, *, prompt: str, system: str | None = None, meta: dict[str, Any] | None = None) -> str:
-        self.calls.append({"prompt": prompt, "system": system, "meta": meta or {}})
-        return "fake-output"
 
 
 def test_build_prompt_includes_core_context():
@@ -52,12 +41,20 @@ def test_build_prompt_uses_template_override():
 
 @pytest.mark.asyncio
 async def test_generate_text_output_calls_provider_with_expected_meta(monkeypatch):
-    fake_provider = FakeTextProvider()
+    calls: list[dict[str, Any]] = []
 
-    def _get_text_provider(_: str):
-        return fake_provider
+    async def _generate_text(*, prompt: str, system: str | None, meta: dict[str, Any], preferred_provider: str | None):
+        calls.append(
+            {
+                "prompt": prompt,
+                "system": system,
+                "meta": meta,
+                "preferred_provider": preferred_provider,
+            }
+        )
+        return "fake-output"
 
-    monkeypatch.setattr("trendr_api.services.generate.registry.get_text", _get_text_provider)
+    monkeypatch.setattr("trendr_api.services.generate.provider_router.generate_text", _generate_text)
 
     result = await generate_text_output(
         transcript="T",
@@ -74,8 +71,9 @@ async def test_generate_text_output_calls_provider_with_expected_meta(monkeypatc
     )
 
     assert result == "fake-output"
-    assert len(fake_provider.calls) == 1
-    call = fake_provider.calls[0]
+    assert len(calls) == 1
+    call = calls[0]
     assert call["meta"]["tone"] == "authoritative"
     assert call["meta"]["output_kind"] == "linkedin"
+    assert call["preferred_provider"] == "openai"
     assert "segment" in call["prompt"]

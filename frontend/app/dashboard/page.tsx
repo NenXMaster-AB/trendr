@@ -61,7 +61,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6">
         <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <p className="mt-2 text-sm text-zinc-300">Paste a YouTube URL to create a Project and run ingestion (stub transcript).</p>
+        <p className="mt-2 text-sm text-zinc-300">Paste a YouTube URL to create a project and run ingestion with transcript extraction.</p>
 
         <div className="mt-4 flex flex-col gap-3 md:flex-row">
           <input

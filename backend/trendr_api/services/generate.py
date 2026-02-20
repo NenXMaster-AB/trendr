@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Any, Dict, Optional
 
-from ..plugins import registry
+from ..plugins import router as provider_router
 from .templates import format_segments, load_template, render_template
 from .writing import build_writing_constraints, extract_source_facts
 
@@ -53,7 +53,6 @@ async def generate_text_output(
     meta: Optional[Dict[str, Any]] = None,
     template_content: Optional[str] = None,
 ) -> str:
-    provider = registry.get_text(provider_name)
     prompt_meta = meta or {}
     prompt = build_prompt(
         transcript=transcript,
@@ -65,8 +64,9 @@ async def generate_text_output(
         notes=prompt_meta.get("notes"),
         template_content=template_content,
     )
-    return await provider.generate(
+    return await provider_router.generate_text(
         prompt=prompt,
         system=None,
         meta={**prompt_meta, "tone": tone, "output_kind": output_kind},
+        preferred_provider=provider_name,
     )

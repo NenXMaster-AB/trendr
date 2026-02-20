@@ -1,6 +1,8 @@
 from __future__ import annotations
-from typing import Dict, Optional
-from .types import TextProvider, ImageProvider
+from dataclasses import asdict
+from typing import Any, Dict
+
+from .types import ImageProvider, TextProvider
 
 
 class PluginRegistry:
@@ -23,6 +25,30 @@ class PluginRegistry:
         if name not in self.image_providers:
             raise KeyError(f"Unknown image provider: {name}")
         return self.image_providers[name]
+
+    def list_text(self) -> list[str]:
+        return sorted(self.text_providers.keys())
+
+    def list_image(self) -> list[str]:
+        return sorted(self.image_providers.keys())
+
+    def text_provider_info(self, name: str) -> dict[str, Any]:
+        provider = self.get_text(name)
+        capabilities = getattr(provider, "capabilities", None)
+        return {
+            "name": provider.name,
+            "available": bool(provider.is_available()),
+            "capabilities": asdict(capabilities) if capabilities is not None else {},
+        }
+
+    def image_provider_info(self, name: str) -> dict[str, Any]:
+        provider = self.get_image(name)
+        capabilities = getattr(provider, "capabilities", None)
+        return {
+            "name": provider.name,
+            "available": bool(provider.is_available()),
+            "capabilities": asdict(capabilities) if capabilities is not None else {},
+        }
 
 
 registry = PluginRegistry()

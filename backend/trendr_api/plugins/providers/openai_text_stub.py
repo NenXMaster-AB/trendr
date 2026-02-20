@@ -1,16 +1,25 @@
 from __future__ import annotations
-from typing import Optional, Dict, Any
-import os
+from typing import Any, Dict, Optional
 
 from ..registry import registry
+from ..types import ProviderCapabilities
 
 
 class OpenAITextStub:
-    name = "openai"
+    name = "openai_stub"
+    capabilities = ProviderCapabilities(
+        max_input_tokens=8_000,
+        max_output_tokens=2_000,
+        supports_json_mode=False,
+        supports_streaming=False,
+        supports_system_prompt=True,
+    )
+
+    def is_available(self) -> bool:
+        return True
 
     async def generate(self, *, prompt: str, system: Optional[str] = None, meta: Optional[Dict[str, Any]] = None) -> str:
-        # Skeleton stub: replace with real OpenAI SDK calls
-        # Keep deterministic for now.
+        # Deterministic local fallback when remote providers are unavailable.
         tone = (meta or {}).get("tone", "professional")
         return (
             "/* Trendr stub output (OpenAI) */\n"

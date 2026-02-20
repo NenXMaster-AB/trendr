@@ -23,11 +23,11 @@ export default function Home() {
         </div>
         <div className="rounded-2xl border border-zinc-800 p-5">
           <h2 className="text-lg font-medium">Generate</h2>
-          <p className="mt-2 text-sm text-zinc-300">Generate bundle drafts using pluggable text provider (stub).</p>
+          <p className="mt-2 text-sm text-zinc-300">Generate bundle drafts using pluggable text providers with fallback routing.</p>
         </div>
         <div className="rounded-2xl border border-zinc-800 p-5">
           <h2 className="text-lg font-medium">Plugins</h2>
-          <p className="mt-2 text-sm text-zinc-300">Provider registry ready for OpenAI/NanoBanana integrations.</p>
+          <p className="mt-2 text-sm text-zinc-300">Provider registry includes capabilities, availability, and OpenAI + stub fallback.</p>
         </div>
       </div>
     </div>
