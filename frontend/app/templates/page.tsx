@@ -18,13 +18,53 @@ type Template = {
   created_at: string;
 };
 
-const VARIABLE_HINTS = [
-  "{tone}",
-  "{brand_voice}",
-  "{audience}",
-  "{transcript}",
-  "{segments}",
+const VARIABLE_GUIDE: Array<{ token: string; description: string }> = [
+  { token: "{tone}", description: "Writing style target for the output." },
+  { token: "{brand_voice}", description: "Brand voice or stylistic constraints." },
+  { token: "{audience}", description: "Intended audience from generation options." },
+  { token: "{transcript}", description: "Full source transcript text." },
+  { token: "{segments}", description: "Timestamped transcript segments." },
 ];
+
+const STARTER_BY_KIND: Record<TemplateKind, string> = {
+  tweet: `Write a tweet draft from this source.
+
+Tone: {tone}
+Brand voice: {brand_voice}
+Audience: {audience}
+
+Use these source facts and avoid generic claims:
+{segments}
+
+Full transcript (for context):
+{transcript}`,
+  linkedin: `Write a LinkedIn post draft from this source.
+
+Tone: {tone}
+Brand voice: {brand_voice}
+Audience: {audience}
+
+Prioritize specific details and concrete insights.
+
+Source segments:
+{segments}
+
+Transcript:
+{transcript}`,
+  blog: `Write a blog draft from this source.
+
+Tone: {tone}
+Brand voice: {brand_voice}
+Audience: {audience}
+
+Use a clear structure and reference concrete points from the source.
+
+Source segments:
+{segments}
+
+Transcript:
+{transcript}`,
+};
 
 export default function TemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -34,7 +74,7 @@ export default function TemplatesPage() {
 
   const [newName, setNewName] = useState("");
   const [newKind, setNewKind] = useState<TemplateKind>("tweet");
-  const [newContent, setNewContent] = useState("Tone: {tone}\\nTranscript: {transcript}");
+  const [newContent, setNewContent] = useState(STARTER_BY_KIND.tweet);
   const [isCreating, setIsCreating] = useState(false);
 
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
@@ -48,6 +88,7 @@ export default function TemplatesPage() {
   const [editContent, setEditContent] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [copiedToken, setCopiedToken] = useState<string | null>(null);
 
   async function refresh() {
     setIsLoading(true);
@@ -87,6 +128,24 @@ export default function TemplatesPage() {
     setEditContent(selectedTemplate.content);
   }, [selectedTemplate]);
 
+  async function copyVariable(token: string) {
+    try {
+      await navigator.clipboard.writeText(token);
+      setCopiedToken(token);
+      setTimeout(() => setCopiedToken((prev) => (prev === token ? null : prev)), 1200);
+    } catch {
+      setError("Could not copy variable to clipboard.");
+    }
+  }
+
+  function appendToken(target: "create" | "edit", token: string) {
+    if (target === "create") {
+      setNewContent((prev) => (prev.trimEnd() ? `${prev.trimEnd()}\n${token}` : token));
+      return;
+    }
+    setEditContent((prev) => (prev.trimEnd() ? `${prev.trimEnd()}\n${token}` : token));
+  }
+
   async function createTemplate() {
     const trimmedName = newName.trim();
     const trimmedContent = newContent.trim();
@@ -110,6 +169,7 @@ export default function TemplatesPage() {
         meta: {},
       });
       setNewName("");
+      setNewContent(STARTER_BY_KIND[newKind]);
       await refresh();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to create template";
@@ -168,14 +228,25 @@ export default function TemplatesPage() {
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6">
         <h1 className="text-2xl font-semibold">Template Library</h1>
         <p className="mt-2 text-sm text-zinc-300">
-          Reusable prompt templates per output type. Creating another template with the same name and kind creates a new version.
+          Create reusable prompt templates by output type. When a generation runs, variable tokens below are replaced with real run values.
         </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {VARIABLE_HINTS.map((hint) => (
-            <span key={hint} className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-300">
-              {hint}
-            </span>
+
+        <div className="mt-4 grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+          {VARIABLE_GUIDE.map((item) => (
+            <button
+              key={item.token}
+              onClick={() => copyVariable(item.token)}
+              className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-left hover:bg-zinc-800/60"
+              title="Click to copy"
+            >
+              <div className="font-mono text-xs text-zinc-100">{item.token}</div>
+              <div className="mt-1 text-xs text-zinc-400">{item.description}</div>
+            </button>
           ))}
+        </div>
+
+        <div className="mt-2 text-xs text-zinc-400">
+          {copiedToken ? `Copied ${copiedToken}` : "Tip: click a token to copy it."}
         </div>
       </div>
 
@@ -223,7 +294,16 @@ export default function TemplatesPage() {
 
         <div className="space-y-4 rounded-2xl border border-zinc-800 p-4">
           <div className="rounded-xl border border-zinc-800 bg-zinc-950/30 p-4">
-            <h2 className="text-sm font-semibold">Create template</h2>
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold">Create template</h2>
+              <button
+                onClick={() => setNewContent(STARTER_BY_KIND[newKind])}
+                className="rounded-lg border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-900"
+              >
+                Use starter
+              </button>
+            </div>
+
             <div className="mt-3 grid gap-3 md:grid-cols-2">
               <input
                 value={newName}
@@ -241,12 +321,26 @@ export default function TemplatesPage() {
                 <option value="blog">Blog</option>
               </select>
             </div>
+
             <textarea
               value={newContent}
               onChange={(event) => setNewContent(event.target.value)}
-              rows={6}
-              className="mt-3 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
+              rows={10}
+              className="mt-3 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 font-mono text-xs"
             />
+
+            <div className="mt-2 flex flex-wrap gap-2">
+              {VARIABLE_GUIDE.map((item) => (
+                <button
+                  key={`create-${item.token}`}
+                  onClick={() => appendToken("create", item.token)}
+                  className="rounded-md border border-zinc-700 px-2 py-1 font-mono text-xs text-zinc-300 hover:bg-zinc-900"
+                >
+                  + {item.token}
+                </button>
+              ))}
+            </div>
+
             <div className="mt-3 flex justify-end">
               <button
                 onClick={createTemplate}
@@ -280,15 +374,30 @@ export default function TemplatesPage() {
                     <option value="blog">Blog</option>
                   </select>
                 </div>
+
                 <textarea
                   value={editContent}
                   onChange={(event) => setEditContent(event.target.value)}
                   rows={12}
-                  className="mt-3 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
+                  className="mt-3 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 font-mono text-xs"
                 />
+
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {VARIABLE_GUIDE.map((item) => (
+                    <button
+                      key={`edit-${item.token}`}
+                      onClick={() => appendToken("edit", item.token)}
+                      className="rounded-md border border-zinc-700 px-2 py-1 font-mono text-xs text-zinc-300 hover:bg-zinc-900"
+                    >
+                      + {item.token}
+                    </button>
+                  ))}
+                </div>
+
                 <div className="mt-2 text-xs text-zinc-400">
                   version {selectedTemplate.version} • id {selectedTemplate.id}
                 </div>
+
                 <div className="mt-3 flex justify-end gap-2">
                   <button
                     onClick={removeTemplate}
