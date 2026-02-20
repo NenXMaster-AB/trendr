@@ -1,24 +1,25 @@
 import logging
 import time
 
+from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
-from sqlmodel import SQLModel, Session, create_engine
+from sqlmodel import Session, create_engine
 from .config import settings
 
 engine = create_engine(settings.database_url, echo=False, pool_pre_ping=True)
 logger = logging.getLogger(__name__)
 
 
-def init_db() -> None:
-    # For a skeleton, create tables on startup.
-    # In production: use Alembic migrations.
+def wait_for_db() -> None:
+    """Wait until a database connection can be established."""
     retries = 30
     wait_seconds = 2
     last_error: OperationalError | None = None
 
     for attempt in range(1, retries + 1):
         try:
-            SQLModel.metadata.create_all(engine)
+            with engine.connect() as connection:
+                connection.execute(text("SELECT 1"))
             return
         except OperationalError as exc:
             last_error = exc

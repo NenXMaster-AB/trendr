@@ -36,6 +36,7 @@ docker compose up --build
 cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
+alembic upgrade head
 uvicorn trendr_api.main:app --reload --port 8000
 ```
 

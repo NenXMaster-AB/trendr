@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
-from .db import init_db
+from .db import wait_for_db
 from .plugins.providers import register_all
 
 from .api.health import router as health_router
@@ -24,7 +24,7 @@ app.add_middleware(
 
 @app.on_event("startup")
 def on_startup():
-    init_db()
+    wait_for_db()
     register_all()
 
 app.include_router(health_router, prefix=settings.api_prefix)
