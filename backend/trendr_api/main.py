@@ -12,6 +12,7 @@ from .api.generate import router as generate_router
 from .api.jobs import router as jobs_router
 from .api.artifacts import router as artifacts_router
 from .api.templates import router as templates_router
+from .api.workflows import router as workflows_router
 
 app = FastAPI(title=settings.app_name)
 
@@ -35,3 +36,4 @@ app.include_router(generate_router, prefix=settings.api_prefix)
 app.include_router(jobs_router, prefix=settings.api_prefix)
 app.include_router(artifacts_router, prefix=settings.api_prefix)
 app.include_router(templates_router, prefix=settings.api_prefix)
+app.include_router(workflows_router, prefix=settings.api_prefix)

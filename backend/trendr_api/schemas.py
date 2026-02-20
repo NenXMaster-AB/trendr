@@ -74,3 +74,29 @@ class TemplateOut(BaseModel):
     content: str
     meta: Dict[str, Any]
     created_at: datetime
+
+
+class WorkflowCreate(BaseModel):
+    name: str
+    definition_json: Dict[str, Any]
+
+
+class WorkflowOut(BaseModel):
+    id: int
+    workspace_id: int
+    name: str
+    definition_json: Dict[str, Any]
+    created_at: datetime
+
+
+class WorkflowRunRequest(BaseModel):
+    project_id: Optional[int] = None
+    url: Optional[HttpUrl] = None
+    project_name: Optional[str] = None
+    outputs: List[Literal["tweet", "linkedin", "blog"]] = Field(
+        default_factory=lambda: ["tweet", "linkedin", "blog"]
+    )
+    tone: str = "professional"
+    brand_voice: Optional[str] = None
+    template_id: Optional[int] = None
+    meta: Dict[str, Any] = Field(default_factory=dict)

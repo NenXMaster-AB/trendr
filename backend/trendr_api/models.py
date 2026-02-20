@@ -85,3 +85,11 @@ class Template(SQLModel, table=True):
     content: str
     meta: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class Workflow(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    workspace_id: int = Field(foreign_key="workspace.id", index=True)
+    name: str
+    definition_json: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    created_at: datetime = Field(default_factory=datetime.utcnow)
