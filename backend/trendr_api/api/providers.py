@@ -19,9 +19,17 @@ def _to_provider_out(info: dict) -> ProviderOut:
 
 @router.get("/text", response_model=list[ProviderOut])
 def list_text_providers(actor: AuthContext = Depends(require_auth)):
-    return [_to_provider_out(registry.text_provider_info(name)) for name in registry.list_text()]
+    context = {"workspace_id": actor.workspace_id}
+    return [
+        _to_provider_out(registry.text_provider_info(name, meta=context))
+        for name in registry.list_text()
+    ]
 
 
 @router.get("/image", response_model=list[ProviderOut])
 def list_image_providers(actor: AuthContext = Depends(require_auth)):
-    return [_to_provider_out(registry.image_provider_info(name)) for name in registry.list_image()]
+    context = {"workspace_id": actor.workspace_id}
+    return [
+        _to_provider_out(registry.image_provider_info(name, meta=context))
+        for name in registry.list_image()
+    ]

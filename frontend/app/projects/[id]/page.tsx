@@ -28,6 +28,8 @@ type Artifact = {
 
 type OutputKind = "tweet" | "linkedin" | "blog";
 type ArtifactTab = "all" | "transcript" | "tweet" | "linkedin" | "blog";
+type JobStatusFilter = "all" | "queued" | "running" | "succeeded" | "failed";
+type JobKindFilter = "all" | "ingest" | "generate" | "workflow";
 type Template = {
   id: number;
   name: string;
@@ -59,6 +61,12 @@ export default function ProjectPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   const [activeTab, setActiveTab] = useState<ArtifactTab>("all");
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [artifactQuery, setArtifactQuery] = useState("");
+  const [artifactHasContentOnly, setArtifactHasContentOnly] = useState(false);
+  const [jobStatusFilter, setJobStatusFilter] = useState<JobStatusFilter>("all");
+  const [jobKindFilter, setJobKindFilter] = useState<JobKindFilter>("all");
+  const [jobErrorsOnly, setJobErrorsOnly] = useState(false);
 
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
   const [selectedOutputs, setSelectedOutputs] = useState<Record<OutputKind, boolean>>({
@@ -107,9 +115,34 @@ export default function ProjectPage() {
   const headerJobStatus = jobId ? job?.status : latestJob?.status;
 
   const filteredArtifacts = useMemo(() => {
-    if (activeTab === "all") return artifacts;
-    return artifacts.filter((artifact) => artifact.kind === activeTab);
-  }, [artifacts, activeTab]);
+    const query = artifactQuery.trim().toLowerCase();
+    return artifacts.filter((artifact) => {
+      if (activeTab !== "all" && artifact.kind !== activeTab) return false;
+      if (artifactHasContentOnly && !(artifact.content ?? "").trim()) return false;
+      if (!query) return true;
+      const haystack = `${artifact.kind} ${artifact.title ?? ""} ${artifact.content ?? ""}`.toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [activeTab, artifactHasContentOnly, artifactQuery, artifacts]);
+
+  const filteredJobs = useMemo(() => {
+    return jobs.filter((entry) => {
+      if (jobStatusFilter !== "all" && entry.status !== jobStatusFilter) return false;
+      if (jobKindFilter !== "all" && entry.kind !== jobKindFilter) return false;
+      if (jobErrorsOnly && !entry.error) return false;
+      return true;
+    });
+  }, [jobErrorsOnly, jobKindFilter, jobStatusFilter, jobs]);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (artifactQuery.trim()) count += 1;
+    if (artifactHasContentOnly) count += 1;
+    if (jobStatusFilter !== "all") count += 1;
+    if (jobKindFilter !== "all") count += 1;
+    if (jobErrorsOnly) count += 1;
+    return count;
+  }, [artifactHasContentOnly, artifactQuery, jobErrorsOnly, jobKindFilter, jobStatusFilter]);
 
   const selectedOutputKinds = useMemo(
     () =>
@@ -157,6 +190,14 @@ export default function ProjectPage() {
 
   function toggleOutput(kind: OutputKind) {
     setSelectedOutputs((prev) => ({ ...prev, [kind]: !prev[kind] }));
+  }
+
+  function clearFilters() {
+    setArtifactQuery("");
+    setArtifactHasContentOnly(false);
+    setJobStatusFilter("all");
+    setJobKindFilter("all");
+    setJobErrorsOnly(false);
   }
 
   async function generate() {
@@ -239,12 +280,20 @@ export default function ProjectPage() {
             </div>
           </div>
 
-          <button
-            onClick={() => setIsGenerateModalOpen(true)}
-            className="rounded-xl bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-950"
-          >
-            Generate Posts
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setIsFilterModalOpen(true)}
+              className="rounded-xl border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-900"
+            >
+              Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+            </button>
+            <button
+              onClick={() => setIsGenerateModalOpen(true)}
+              className="rounded-xl bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-950"
+            >
+              Generate Posts
+            </button>
+          </div>
         </div>
 
         {jobId ? (
@@ -262,8 +311,12 @@ export default function ProjectPage() {
 
       <div className="rounded-2xl border border-zinc-800 p-6">
         <h2 className="text-lg font-semibold">Jobs</h2>
+        <p className="mt-1 text-xs text-zinc-400">
+          Showing {filteredJobs.length} of {jobs.length}
+          {activeFilterCount > 0 ? " (filtered)" : ""}.
+        </p>
         <div className="mt-3 space-y-2">
-          {jobs.map((j) => (
+          {filteredJobs.map((j) => (
             <div key={j.id} className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-3">
               <div className="text-sm font-medium">
                 #{j.id} • {j.kind}
@@ -273,11 +326,18 @@ export default function ProjectPage() {
             </div>
           ))}
           {jobs.length === 0 ? <div className="text-sm text-zinc-400">No jobs yet.</div> : null}
+          {jobs.length > 0 && filteredJobs.length === 0 ? (
+            <div className="text-sm text-zinc-400">No jobs match current filters.</div>
+          ) : null}
         </div>
       </div>
 
       <div className="rounded-2xl border border-zinc-800 p-6">
         <h2 className="text-lg font-semibold">Artifacts</h2>
+        <p className="mt-1 text-xs text-zinc-400">
+          Showing {filteredArtifacts.length} of {artifacts.length}
+          {activeFilterCount > 0 || activeTab !== "all" ? " (filtered)" : ""}.
+        </p>
 
         <div className="mt-3 flex flex-wrap gap-2">
           {TABS.map((tab) => {
@@ -351,10 +411,109 @@ export default function ProjectPage() {
           {artifacts.length === 0 ? (
             <div className="text-sm text-zinc-400">No artifacts yet.</div>
           ) : filteredArtifacts.length === 0 ? (
-            <div className="text-sm text-zinc-400">No artifacts in this tab yet.</div>
+            <div className="text-sm text-zinc-400">No artifacts match current tab/filters.</div>
           ) : null}
         </div>
       </div>
+
+      {isFilterModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/70 p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-zinc-700 bg-zinc-900 p-6">
+            <h2 className="text-lg font-semibold">Project Filters</h2>
+            <p className="mt-1 text-xs text-zinc-400">
+              Narrow artifacts and jobs for this project detail view.
+            </p>
+
+            <div className="mt-4 space-y-4">
+              <div>
+                <label className="mb-2 block text-xs font-medium text-zinc-300" htmlFor="artifact-query">
+                  Artifact search
+                </label>
+                <input
+                  id="artifact-query"
+                  type="text"
+                  value={artifactQuery}
+                  onChange={(e) => setArtifactQuery(e.target.value)}
+                  placeholder="Search artifact kind, title, or content..."
+                  className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
+                />
+              </div>
+
+              <label className="flex items-center gap-2 text-sm text-zinc-200">
+                <input
+                  type="checkbox"
+                  checked={artifactHasContentOnly}
+                  onChange={(e) => setArtifactHasContentOnly(e.target.checked)}
+                  className="h-4 w-4"
+                />
+                Artifacts with content only
+              </label>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-2 block text-xs font-medium text-zinc-300" htmlFor="job-status-filter">
+                    Job status
+                  </label>
+                  <select
+                    id="job-status-filter"
+                    value={jobStatusFilter}
+                    onChange={(e) => setJobStatusFilter(e.target.value as JobStatusFilter)}
+                    className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
+                  >
+                    <option value="all">All statuses</option>
+                    <option value="queued">Queued</option>
+                    <option value="running">Running</option>
+                    <option value="succeeded">Succeeded</option>
+                    <option value="failed">Failed</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-xs font-medium text-zinc-300" htmlFor="job-kind-filter">
+                    Job kind
+                  </label>
+                  <select
+                    id="job-kind-filter"
+                    value={jobKindFilter}
+                    onChange={(e) => setJobKindFilter(e.target.value as JobKindFilter)}
+                    className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
+                  >
+                    <option value="all">All kinds</option>
+                    <option value="ingest">Ingest</option>
+                    <option value="generate">Generate</option>
+                    <option value="workflow">Workflow</option>
+                  </select>
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2 text-sm text-zinc-200">
+                <input
+                  type="checkbox"
+                  checked={jobErrorsOnly}
+                  onChange={(e) => setJobErrorsOnly(e.target.checked)}
+                  className="h-4 w-4"
+                />
+                Jobs with errors only
+              </label>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={clearFilters}
+                className="rounded-lg border border-zinc-700 px-3 py-2 text-sm text-zinc-200"
+              >
+                Clear filters
+              </button>
+              <button
+                onClick={() => setIsFilterModalOpen(false)}
+                className="rounded-lg bg-zinc-100 px-3 py-2 text-sm font-medium text-zinc-950"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {isGenerateModalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/70 p-4">

@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     text_provider_fallbacks: str = "openai_stub"
 
     jwt_secret: str = "dev-secret-change-me"
+    secrets_encryption_key: str | None = None
 
     @property
     def text_provider_fallback_list(self) -> list[str]:

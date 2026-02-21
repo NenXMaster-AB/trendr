@@ -93,3 +93,21 @@ class Workflow(SQLModel, table=True):
     name: str
     definition_json: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ProviderCredential(SQLModel, table=True):
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id",
+            "provider",
+            name="uq_provider_credential_workspace_provider",
+        ),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    workspace_id: int = Field(foreign_key="workspace.id", index=True)
+    provider: str = Field(index=True)
+    encrypted_api_key: str
+    key_hint: str = ""
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)

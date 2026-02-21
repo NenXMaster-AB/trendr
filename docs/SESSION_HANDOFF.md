@@ -6,6 +6,13 @@
 - Stack boots with `docker compose up --build`.
 - End-to-end baseline works: import YouTube URL, generate drafts, edit/save artifacts.
 
+## High-Priority Follow-Up
+- Completed (local): provider settings UI + API with workspace-scoped encrypted key storage and RBAC checks for updates.
+- Remaining hardening:
+  - move encryption material to managed secret infrastructure and add key rotation policy,
+  - expand RBAC beyond owner/admin write checks (e.g., explicit settings permissions),
+  - add audit logging for secret changes.
+
 ## Phase A Progress (Directive)
 - Completed: `A1` artifact update endpoint (`PATCH /v1/artifacts/{id}`).
 - Completed: `A2` artifact editor UI (edit/save/cancel).
@@ -13,8 +20,8 @@
 - Completed: `A4` filesystem templates + render service.
 - Completed: `A5` real YouTube transcript ingestion (`youtube-transcript-api`) with robust `extract_video_id`.
 - Completed: `A6` jobs list + project detail endpoints and UI job visibility.
-- In progress/partial: `A7` project detail UX polish (basic header/jobs done; tabs/filter modal still open).
-- Pending: `A8` backend tests.
+- Completed: `A7` project detail UX polish (header/source/job status, artifact-kind tabs, project-level filters, richer generate modal options).
+- Completed: `A8` backend tests (`pytest`) for templates, video ID parsing, generation service, artifact patch, and jobs list filters.
 - Pending: `A9` minimal CI.
 
 ## Known Notes
@@ -23,9 +30,9 @@
 - Celery async execution uses an isolated event loop per call to avoid coroutine reuse errors.
 
 ## Recommended Next Session Start
-1. Finish `A7`: add artifact-kind tabs, project-level filters, and richer generate options (selected outputs, tone, brand voice).
-2. Implement `A8`: add `backend/tests/` for template rendering, video ID parsing, generate service, artifact patch, and jobs list filters.
-3. Implement `A9`: add `.github/workflows/ci.yml` running backend tests and frontend build.
+1. Implement `A9`: add `.github/workflows/ci.yml` running backend tests and frontend build.
+2. Finish security hardening around provider secrets (managed secret storage/key rotation + audit logs).
+3. Address warning cleanup backlog (`datetime.utcnow()` and FastAPI `on_event` deprecations).
 
 ## Quick Smoke Test
 ```bash

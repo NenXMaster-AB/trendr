@@ -16,7 +16,7 @@ class TextProvider(Protocol):
     name: str
     capabilities: ProviderCapabilities
 
-    def is_available(self) -> bool:
+    def is_available(self, *, meta: Optional[Dict[str, Any]] = None) -> bool:
         ...
 
     async def generate(
@@ -33,7 +33,7 @@ class ImageProvider(Protocol):
     name: str
     capabilities: ProviderCapabilities
 
-    def is_available(self) -> bool:
+    def is_available(self, *, meta: Optional[Dict[str, Any]] = None) -> bool:
         ...
 
     async def generate_image(

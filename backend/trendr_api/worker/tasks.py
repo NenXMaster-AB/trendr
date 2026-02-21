@@ -7,6 +7,8 @@ from sqlmodel import Session, select
 
 from ..db import engine
 from ..models import Artifact, Job, Project, Template, Workflow
+from ..plugins.providers import register_all
+from ..plugins.registry import registry
 from ..services.ingest import fetch_youtube_metadata, fetch_youtube_transcript
 from ..services.generate import generate_text_output
 from ..workflows.engine import topological_order, validate_workflow
@@ -218,8 +220,15 @@ WORKFLOW_TASK_HANDLERS: dict[str, Callable[..., dict[str, Any]]] = {
 }
 
 
+def _ensure_providers_registered() -> None:
+    if registry.list_text():
+        return
+    register_all()
+
+
 @shared_task(name="trendr.generate_posts")
 def generate_posts(job_id: int):
+    _ensure_providers_registered()
     with Session(engine) as session:
         job = session.exec(select(Job).where(Job.id == job_id)).first()
         if not job:
@@ -282,7 +291,7 @@ def generate_posts(job_id: int):
                         tone=tone,
                         brand_voice=brand_voice,
                         provider_name="openai",
-                        meta=payload.get("meta"),
+                        meta={**(payload.get("meta") or {}), "workspace_id": job.workspace_id},
                         template_content=template.content if template else None,
                     )
                 )

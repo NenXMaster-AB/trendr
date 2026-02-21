@@ -77,6 +77,10 @@ Providers live in `backend/trendr_api/plugins/`. Add new ones by implementing:
 - `TextProvider`
 - `ImageProvider`
 
+Workspace-scoped provider keys can be managed from:
+- UI: `/providers`
+- API: `GET/PUT/DELETE /v1/provider-settings/text/{provider}`
+
 ### Workflows
 Workflows are persisted in DB and executable via:
 - `POST /v1/workflows`

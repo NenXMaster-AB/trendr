@@ -15,7 +15,7 @@ class NanoBananaImageStub:
         supports_system_prompt=False,
     )
 
-    def is_available(self) -> bool:
+    def is_available(self, *, meta: Optional[Dict[str, Any]] = None) -> bool:
         return True
 
     async def generate_image(self, *, prompt: str, size: str = "1024x1024", meta: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:

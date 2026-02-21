@@ -14,7 +14,7 @@ class _TextProvider:
     available: bool
     capabilities: ProviderCapabilities
 
-    def is_available(self) -> bool:
+    def is_available(self, *, meta: dict | None = None) -> bool:
         return self.available
 
     async def generate(self, *, prompt: str, system: str | None = None, meta: dict | None = None) -> str:
@@ -27,7 +27,7 @@ class _ImageProvider:
     available: bool
     capabilities: ProviderCapabilities
 
-    def is_available(self) -> bool:
+    def is_available(self, *, meta: dict | None = None) -> bool:
         return self.available
 
     async def generate_image(self, *, prompt: str, size: str = "1024x1024", meta: dict | None = None) -> dict:

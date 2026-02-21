@@ -19,7 +19,7 @@ class _FakeTextProvider:
     calls: list[dict[str, Any]] = field(default_factory=list)
     capabilities: ProviderCapabilities = ProviderCapabilities()
 
-    def is_available(self) -> bool:
+    def is_available(self, *, meta: dict | None = None) -> bool:
         return self.available
 
     async def generate(self, *, prompt: str, system: str | None = None, meta: dict[str, Any] | None = None) -> str:

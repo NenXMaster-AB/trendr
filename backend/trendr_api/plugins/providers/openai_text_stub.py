@@ -15,7 +15,7 @@ class OpenAITextStub:
         supports_system_prompt=True,
     )
 
-    def is_available(self) -> bool:
+    def is_available(self, *, meta: Optional[Dict[str, Any]] = None) -> bool:
         return True
 
     async def generate(self, *, prompt: str, system: Optional[str] = None, meta: Optional[Dict[str, Any]] = None) -> str:

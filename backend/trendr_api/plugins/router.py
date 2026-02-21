@@ -39,7 +39,7 @@ async def generate_text(
             errors.append(f"{provider_name}: {exc}")
             continue
 
-        if not provider.is_available():
+        if not provider.is_available(meta=meta):
             errors.append(f"{provider_name}: unavailable (missing credentials/config)")
             continue
 

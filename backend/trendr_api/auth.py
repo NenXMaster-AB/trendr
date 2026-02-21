@@ -16,6 +16,15 @@ class AuthContext:
     user_external_id: str
     workspace_id: int
     workspace_slug: str
+    workspace_role: str
+
+
+ROLE_RANKS: dict[str, int] = {
+    "viewer": 10,
+    "member": 20,
+    "admin": 30,
+    "owner": 40,
+}
 
 
 def _normalize_workspace_slug(slug: str) -> str:
@@ -126,13 +135,33 @@ def resolve_auth_context(
         workspace_id=workspace.id,
         user_id=user.id,
     )
+    membership = session.exec(
+        select(WorkspaceMember).where(
+            WorkspaceMember.workspace_id == workspace.id,
+            WorkspaceMember.user_id == user.id,
+        )
+    ).first()
+    role = membership.role if membership else "member"
 
     return AuthContext(
         user_id=user.id,
         user_external_id=normalized_user_id,
         workspace_id=workspace.id,
         workspace_slug=workspace.slug,
+        workspace_role=role,
     )
+
+
+def require_workspace_role(actor: AuthContext, minimum_role: str) -> None:
+    required = ROLE_RANKS.get(minimum_role)
+    if required is None:
+        raise HTTPException(status_code=500, detail=f"Unknown minimum role '{minimum_role}'")
+    actual = ROLE_RANKS.get(actor.workspace_role, 0)
+    if actual < required:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Requires workspace role '{minimum_role}' or higher",
+        )
 
 
 def require_auth(

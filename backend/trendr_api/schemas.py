@@ -114,3 +114,15 @@ class ProviderOut(BaseModel):
     name: str
     available: bool
     capabilities: ProviderCapabilitiesOut
+
+
+class ProviderApiKeyUpdate(BaseModel):
+    api_key: str = Field(min_length=8, max_length=500)
+
+
+class ProviderSettingOut(BaseModel):
+    provider: str
+    has_api_key: bool
+    key_hint: Optional[str] = None
+    configured_via: Optional[Literal["workspace", "environment"]] = None
+    updated_at: Optional[datetime] = None

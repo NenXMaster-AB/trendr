@@ -32,21 +32,31 @@ class PluginRegistry:
     def list_image(self) -> list[str]:
         return sorted(self.image_providers.keys())
 
-    def text_provider_info(self, name: str) -> dict[str, Any]:
+    def text_provider_info(
+        self,
+        name: str,
+        *,
+        meta: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         provider = self.get_text(name)
         capabilities = getattr(provider, "capabilities", None)
         return {
             "name": provider.name,
-            "available": bool(provider.is_available()),
+            "available": bool(provider.is_available(meta=meta)),
             "capabilities": asdict(capabilities) if capabilities is not None else {},
         }
 
-    def image_provider_info(self, name: str) -> dict[str, Any]:
+    def image_provider_info(
+        self,
+        name: str,
+        *,
+        meta: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         provider = self.get_image(name)
         capabilities = getattr(provider, "capabilities", None)
         return {
             "name": provider.name,
-            "available": bool(provider.is_available()),
+            "available": bool(provider.is_available(meta=meta)),
             "capabilities": asdict(capabilities) if capabilities is not None else {},
         }
 

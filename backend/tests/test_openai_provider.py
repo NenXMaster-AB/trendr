@@ -86,6 +86,55 @@ async def test_openai_provider_generate_parses_chat_completion(monkeypatch):
     assert call["headers"]["Authorization"] == "Bearer test-key"
 
 
+@pytest.mark.asyncio
+async def test_openai_provider_generate_uses_workspace_key(monkeypatch):
+    original_key = settings.openai_api_key
+    original_model = settings.openai_model
+    original_base = settings.openai_base_url
+
+    settings.openai_api_key = None
+    settings.openai_model = "gpt-test"
+    settings.openai_base_url = "https://api.openai.com/v1"
+
+    fake_response = _FakeResponse(
+        status_code=200,
+        payload={
+            "choices": [
+                {
+                    "message": {
+                        "content": "Generated output",
+                    }
+                }
+            ]
+        },
+    )
+    fake_client = _FakeAsyncClient(response=fake_response)
+
+    def _client_factory(*, timeout: int):
+        assert timeout == 45
+        return fake_client
+
+    monkeypatch.setattr("trendr_api.plugins.providers.openai_text.httpx.AsyncClient", _client_factory)
+
+    try:
+        provider = OpenAITextProvider()
+        monkeypatch.setattr(provider, "_workspace_api_key", lambda workspace_id: "ws-key")
+        result = await provider.generate(
+            prompt="hello",
+            system=None,
+            meta={"workspace_id": 42},
+        )
+    finally:
+        settings.openai_api_key = original_key
+        settings.openai_model = original_model
+        settings.openai_base_url = original_base
+
+    assert result == "Generated output"
+    assert len(fake_client.calls) == 1
+    call = fake_client.calls[0]
+    assert call["headers"]["Authorization"] == "Bearer ws-key"
+
+
 def test_openai_provider_unavailable_without_api_key():
     original_key = settings.openai_api_key
     settings.openai_api_key = None
@@ -95,3 +144,14 @@ def test_openai_provider_unavailable_without_api_key():
         settings.openai_api_key = original_key
 
     assert provider.is_available() is False
+
+
+def test_openai_provider_available_with_workspace_key(monkeypatch):
+    original_key = settings.openai_api_key
+    settings.openai_api_key = None
+    try:
+        provider = OpenAITextProvider()
+        monkeypatch.setattr(provider, "_workspace_api_key", lambda workspace_id: "ws-openai-key")
+        assert provider.is_available(meta={"workspace_id": 123}) is True
+    finally:
+        settings.openai_api_key = original_key
