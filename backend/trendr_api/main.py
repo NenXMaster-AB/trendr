@@ -1,8 +1,15 @@
-from fastapi import FastAPI
+from __future__ import annotations
+
+import logging
+import time
+from uuid import uuid4
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
 from .db import wait_for_db
+from .observability import clear_request_id, configure_logging, set_request_id
 from .plugins.providers import register_all
 
 from .api.health import router as health_router
@@ -16,6 +23,9 @@ from .api.workflows import router as workflows_router
 from .api.providers import router as providers_router
 from .api.provider_settings import router as provider_settings_router
 
+configure_logging()
+logger = logging.getLogger(__name__)
+
 app = FastAPI(title=settings.app_name)
 
 app.add_middleware(
@@ -25,6 +35,42 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def request_context_middleware(request: Request, call_next):
+    request_id = request.headers.get("X-Request-Id") or str(uuid4())
+    set_request_id(request_id)
+    started = time.perf_counter()
+    try:
+        response = await call_next(request)
+    except Exception:
+        duration_ms = round((time.perf_counter() - started) * 1000, 2)
+        logger.exception(
+            "request_failed",
+            extra={
+                "method": request.method,
+                "path": request.url.path,
+                "duration_ms": duration_ms,
+            },
+        )
+        clear_request_id()
+        raise
+
+    duration_ms = round((time.perf_counter() - started) * 1000, 2)
+    response.headers["X-Request-Id"] = request_id
+    logger.info(
+        "request_completed",
+        extra={
+            "method": request.method,
+            "path": request.url.path,
+            "status_code": response.status_code,
+            "duration_ms": duration_ms,
+        },
+    )
+    clear_request_id()
+    return response
+
 
 @app.on_event("startup")
 def on_startup():

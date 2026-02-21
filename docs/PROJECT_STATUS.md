@@ -11,7 +11,7 @@ Last updated: 2026-02-21
 - `A6` Completed
 - `A7` Completed
 - `A8` Completed (backend tests passing)
-- `A9` Pending (CI workflow file not yet added)
+- `A9` Completed (CI workflow in `.github/workflows/ci.yml`)
 
 ## Milestone B (Roadmap)
 - `B1` Mostly completed (workspace-scoped auth + membership roles)
@@ -19,7 +19,7 @@ Last updated: 2026-02-21
 - `B3` Completed (template CRUD + frontend template page)
 - `B4` Mostly completed (provider registry/router + OpenAI integration + workspace key settings UI/API)
 - `B5` Completed (workflow model + API + runner v0 + UI page)
-- `B6` Pending/Partial (basic logging only; no request-id correlation or expanded health checks yet)
+- `B6` Completed (structured JSON logs, request-id middleware, worker job-id logging, DB/Redis health checks)
 
 ## Security Progress
 - Implemented workspace-scoped provider key storage.
@@ -28,9 +28,9 @@ Last updated: 2026-02-21
 - Implemented provider settings UI (`/providers`) for save/remove and status visibility.
 
 ## Next Priorities
-1. Add CI (`A9`) in `.github/workflows/ci.yml`.
-2. Complete observability hardening (`B6`).
-3. Security hardening follow-ups:
+1. Security hardening follow-ups:
    - key rotation strategy,
    - audit log events for secret changes,
    - managed secret backend/KMS integration.
+2. Replace remaining deprecated datetime/startup patterns (`datetime.utcnow()`, FastAPI `on_event`).
+3. Tighten production defaults (CORS restrictions and secret/bootstrap defaults).

@@ -2,12 +2,13 @@
 
 ## Current State
 - Branch: `main`
-- Last pushed commit: `417929a` (`feat(ingest): add real youtube transcript flow and job visibility`)
+- Last pushed commit: `8e44496` (`feat(platform): add provider key management and project UX polish`)
 - Stack boots with `docker compose up --build`.
 - End-to-end baseline works: import YouTube URL, generate drafts, edit/save artifacts.
 
 ## High-Priority Follow-Up
 - Completed (local): provider settings UI + API with workspace-scoped encrypted key storage and RBAC checks for updates.
+- Completed (local): observability hardening baseline (structured JSON logs, request-id middleware, worker `job_id` logs, DB/Redis health checks).
 - Remaining hardening:
   - move encryption material to managed secret infrastructure and add key rotation policy,
   - expand RBAC beyond owner/admin write checks (e.g., explicit settings permissions),
@@ -22,7 +23,7 @@
 - Completed: `A6` jobs list + project detail endpoints and UI job visibility.
 - Completed: `A7` project detail UX polish (header/source/job status, artifact-kind tabs, project-level filters, richer generate modal options).
 - Completed: `A8` backend tests (`pytest`) for templates, video ID parsing, generation service, artifact patch, and jobs list filters.
-- Pending: `A9` minimal CI.
+- Completed: `A9` minimal CI (`.github/workflows/ci.yml` backend tests + frontend build).
 
 ## Known Notes
 - Transcript retrieval can still fail for some videos/IPs (captions disabled, region/private, request blocking). Errors are surfaced in `job.error`.
@@ -30,9 +31,9 @@
 - Celery async execution uses an isolated event loop per call to avoid coroutine reuse errors.
 
 ## Recommended Next Session Start
-1. Implement `A9`: add `.github/workflows/ci.yml` running backend tests and frontend build.
-2. Finish security hardening around provider secrets (managed secret storage/key rotation + audit logs).
-3. Address warning cleanup backlog (`datetime.utcnow()` and FastAPI `on_event` deprecations).
+1. Finish security hardening around provider secrets (managed secret storage/key rotation + audit logs).
+2. Address warning cleanup backlog (`datetime.utcnow()` and FastAPI `on_event` deprecations).
+3. Tighten production defaults (CORS restrictions and secret/bootstrap defaults).
 
 ## Quick Smoke Test
 ```bash

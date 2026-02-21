@@ -1,6 +1,9 @@
 from celery import Celery
 from ..config import settings
+from ..observability import configure_logging
 from ..plugins.providers import register_all
+
+configure_logging()
 
 celery_app = Celery(
     "trendr",
