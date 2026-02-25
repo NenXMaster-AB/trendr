@@ -47,7 +47,7 @@ Trendr is a modular content creation platform that:
 
 ## 2) Milestone Plan (High Level)
 
-### Milestone A — “MVP Functional Spine” (1–2 weeks)
+### Milestone A — “MVP Functional Spine” ✅ COMPLETE
 Goal: The critical path works end-to-end reliably.
 
 **Deliverables**
@@ -57,28 +57,34 @@ Goal: The critical path works end-to-end reliably.
 - Job status polling + error surfaces
 - Basic editing + export
 
-### Milestone B — “V1 Platform Core” (2–4 weeks)
+### Milestone B — “V1 Platform Core” ✅ COMPLETE
 Goal: Make it multi-tenant, secure, extensible.
 
 **Deliverables**
-- Auth + Workspaces
-- Template system + variables
-- Plugin loader + registry improvements
-- Workflow engine (simple DAG) and node/task registry
-- Observability + structured logging
-- Alembic migrations
+- Auth + Workspaces (header-based with auto-provisioning)
+- Template system + variables (CRUD + versioning)
+- Plugin loader + registry (text + image providers with fallback routing)
+- Workflow engine (DAG with topological sort) and node/task registry
+- Observability + structured logging (request IDs, job IDs)
+- Alembic migrations (5 migrations)
+- Provider key management (per-workspace encrypted keys)
 
-### Milestone C — “Media + Publishing” (4–8 weeks)
-Goal: Thumbnails/icons + scheduling + posting.
+### Milestone C — “Media + Publishing + Analytics” ✅ COMPLETE
+Goal: Thumbnails/icons + scheduling + posting + usage analytics.
 
 **Deliverables**
-- Image generation provider integrations
-- Visual templates for thumbnails/icons
-- Social integrations (X/LinkedIn) or scheduling queue
-- Content calendar UI
-- Analytics collection
+- DALL-E 3 image generation via OpenAI provider with fallback router
+- MinIO S3 storage for generated images (boto3)
+- Media generation endpoint, Celery task, and project Media tab
+- ScheduledPost model with CRUD API (create, list, update, cancel)
+- Celery Beat periodic task (check_scheduled_posts every 60s)
+- Schedule queue UI with date grouping and filters
+- Event model for analytics (job_completed, artifact_created, media_generated)
+- Analytics API (summary + timeline endpoints)
+- Recharts analytics dashboard with summary cards and stacked bar chart
+- 7 Alembic migrations total, 78+ backend tests
 
-### Milestone D — “Developer Ecosystem” (8+ weeks)
+### Milestone D — “Developer Ecosystem” ⬜ NEXT
 Goal: Make Trendr a platform.
 
 **Deliverables**
