@@ -15,6 +15,12 @@ celery_app.conf.update(
     task_track_started=True,
     task_time_limit=60 * 15,
     broker_connection_retry_on_startup=True,
+    beat_schedule={
+        "check-scheduled-posts": {
+            "task": "trendr.check_scheduled_posts",
+            "schedule": 60.0,
+        },
+    },
 )
 
 # Worker runs in a separate process from FastAPI, so providers must be

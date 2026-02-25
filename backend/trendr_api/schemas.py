@@ -116,6 +116,60 @@ class ProviderOut(BaseModel):
     capabilities: ProviderCapabilitiesOut
 
 
+class ScheduledPostCreate(BaseModel):
+    project_id: Optional[int] = None
+    artifact_id: Optional[int] = None
+    platform: str = "twitter"
+    title: str = ""
+    content: str = ""
+    scheduled_at: datetime
+    meta: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ScheduledPostUpdate(BaseModel):
+    platform: Optional[str] = None
+    title: Optional[str] = None
+    content: Optional[str] = None
+    scheduled_at: Optional[datetime] = None
+    status: Optional[str] = None
+    meta: Optional[Dict[str, Any]] = None
+
+
+class ScheduledPostOut(BaseModel):
+    id: int
+    workspace_id: int
+    project_id: Optional[int] = None
+    artifact_id: Optional[int] = None
+    platform: str
+    title: str
+    content: str
+    scheduled_at: datetime
+    status: str
+    meta: Dict[str, Any]
+    created_at: datetime
+    updated_at: datetime
+
+
+class AnalyticsSummaryOut(BaseModel):
+    kind: str
+    count: int
+
+
+class TimelinePointOut(BaseModel):
+    date: str
+    kind: str
+    count: int
+
+
+class MediaGenerateRequest(BaseModel):
+    project_id: int
+    prompt: str
+    kind: str = "image"
+    size: str = "1024x1024"
+    quality: str = "standard"
+    style: str = "vivid"
+
+
 class ProviderApiKeyUpdate(BaseModel):
     api_key: str = Field(min_length=8, max_length=500)
 

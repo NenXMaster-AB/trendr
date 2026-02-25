@@ -7,12 +7,14 @@ from celery import shared_task
 from sqlmodel import Session, select
 
 from ..db import engine
-from ..models import Artifact, Job, Project, Template, Workflow
+from ..models import Artifact, Event, Job, Project, ScheduledPost, Template, Workflow
 from ..observability import clear_job_id, set_job_id
 from ..plugins.providers import register_all
 from ..plugins.registry import registry
 from ..services.ingest import fetch_youtube_metadata, fetch_youtube_transcript
 from ..services.generate import generate_text_output
+from ..services.analytics import record_event
+from ..services.media import generate_and_upload_image
 from ..workflows.engine import topological_order, validate_workflow
 
 logger = logging.getLogger(__name__)
@@ -86,6 +88,10 @@ def ingest_youtube(job_id: int):
                         "segments": len(transcript["segments"]),
                     },
                 )
+                try:
+                    record_event(session, workspace_id=job.workspace_id, project_id=job.project_id, kind="job_completed", meta={"job_id": job.id, "job_kind": "ingest"})
+                except Exception:
+                    logger.warning("event_recording_failed", exc_info=True)
                 logger.info(
                     "celery_task_succeeded",
                     extra={
@@ -347,6 +353,12 @@ def generate_posts(job_id: int):
                         "template_id": template.id if template else None,
                     },
                 )
+                try:
+                    record_event(session, workspace_id=job.workspace_id, project_id=project_id, kind="job_completed", meta={"job_id": job.id, "job_kind": "generate"})
+                    for aid in created_artifact_ids:
+                        record_event(session, workspace_id=job.workspace_id, project_id=project_id, kind="artifact_created", meta={"artifact_id": aid})
+                except Exception:
+                    logger.warning("event_recording_failed", exc_info=True)
                 logger.info(
                     "celery_task_succeeded",
                     extra={
@@ -364,6 +376,97 @@ def generate_posts(job_id: int):
                     error=f"{e.__class__.__name__}: {e}",
                 )
                 logger.exception("celery_task_failed", extra={"task": "generate_posts"})
+                return {"ok": False, "error": str(e)}
+    finally:
+        clear_job_id()
+
+
+@shared_task(name="trendr.generate_media")
+def generate_media(job_id: int):
+    set_job_id(job_id)
+    logger.info("celery_task_started", extra={"task": "generate_media"})
+    _ensure_providers_registered()
+    try:
+        with Session(engine) as session:
+            job = session.exec(select(Job).where(Job.id == job_id)).first()
+            if not job:
+                logger.warning("celery_task_job_not_found", extra={"task": "generate_media"})
+                return {"error": "job not found"}
+
+            _update_job(session, job, status="running")
+            try:
+                payload = job.input or {}
+                project_id = job.project_id or payload.get("project_id")
+                prompt = payload.get("prompt", "")
+                size = payload.get("size", "1024x1024")
+                quality = payload.get("quality", "standard")
+                style = payload.get("style", "vivid")
+                kind = payload.get("kind", "image")
+
+                if not project_id:
+                    raise ValueError("Missing project_id for media generation job")
+                if not prompt:
+                    raise ValueError("Missing prompt for media generation job")
+
+                result = _run_async(
+                    generate_and_upload_image(
+                        prompt=prompt,
+                        size=size,
+                        quality=quality,
+                        style=style,
+                        workspace_id=job.workspace_id,
+                        project_id=project_id,
+                    )
+                )
+
+                artifact = Artifact(
+                    workspace_id=job.workspace_id,
+                    project_id=project_id,
+                    kind=kind,
+                    title=f"{kind.title()} — {prompt[:80]}",
+                    content=result.get("url", ""),
+                    meta={
+                        "prompt": prompt,
+                        "revised_prompt": result.get("revised_prompt", ""),
+                        "size": size,
+                        "quality": quality,
+                        "style": style,
+                    },
+                )
+                session.add(artifact)
+                session.flush()
+
+                _update_job(
+                    session,
+                    job,
+                    status="succeeded",
+                    output={
+                        "url": result.get("url", ""),
+                        "artifact_id": artifact.id,
+                    },
+                )
+                try:
+                    record_event(session, workspace_id=job.workspace_id, project_id=project_id, kind="job_completed", meta={"job_id": job.id, "job_kind": "media"})
+                    record_event(session, workspace_id=job.workspace_id, project_id=project_id, kind="media_generated", meta={"artifact_id": artifact.id})
+                except Exception:
+                    logger.warning("event_recording_failed", exc_info=True)
+                logger.info(
+                    "celery_task_succeeded",
+                    extra={
+                        "task": "generate_media",
+                        "project_id": project_id,
+                        "artifact_id": artifact.id,
+                    },
+                )
+                return {"ok": True}
+            except Exception as e:
+                _update_job(
+                    session,
+                    job,
+                    status="failed",
+                    error=f"{e.__class__.__name__}: {e}",
+                )
+                logger.exception("celery_task_failed", extra={"task": "generate_media"})
                 return {"ok": False, "error": str(e)}
     finally:
         clear_job_id()
@@ -489,6 +592,35 @@ def run_workflow(job_id: int):
                 return {"ok": False, "error": str(e)}
     finally:
         clear_job_id()
+
+
+@shared_task(name="trendr.check_scheduled_posts")
+def check_scheduled_posts():
+    logger.info("celery_task_started", extra={"task": "check_scheduled_posts"})
+    now = datetime.utcnow()
+    with Session(engine) as session:
+        posts = session.exec(
+            select(ScheduledPost).where(
+                ScheduledPost.status == "scheduled",
+                ScheduledPost.scheduled_at <= now,
+            )
+        ).all()
+
+        count = 0
+        for post in posts:
+            post.status = "ready"
+            post.updated_at = now
+            session.add(post)
+            count += 1
+
+        if count > 0:
+            session.commit()
+
+        logger.info(
+            "celery_task_succeeded",
+            extra={"task": "check_scheduled_posts", "marked_ready": count},
+        )
+    return {"ok": True, "marked_ready": count}
 
 
 def _run_async(coro):

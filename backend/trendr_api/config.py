@@ -14,12 +14,21 @@ class Settings(BaseSettings):
     celery_broker_url: str
     celery_result_backend: str
 
+    s3_endpoint_url: str = "http://minio:9000"
+    s3_access_key: str = "minioadmin"
+    s3_secret_key: str = "minioadmin"
+    s3_bucket: str = "trendr-media"
+    s3_public_url: str = "http://localhost:9000/trendr-media"
+
     openai_api_key: str | None = None
     openai_model: str = "gpt-4o-mini"
     openai_base_url: str = "https://api.openai.com/v1"
+    dalle_model: str = "dall-e-3"
     nanobanana_api_key: str | None = None
     text_provider_default: str = "openai"
     text_provider_fallbacks: str = "openai_stub"
+    image_provider_default: str = "openai_image"
+    image_provider_fallbacks: str = "nanobanana"
 
     jwt_secret: str = "dev-secret-change-me"
     secrets_encryption_key: str | None = None
@@ -27,6 +36,10 @@ class Settings(BaseSettings):
     @property
     def text_provider_fallback_list(self) -> list[str]:
         return [item.strip() for item in self.text_provider_fallbacks.split(",") if item.strip()]
+
+    @property
+    def image_provider_fallback_list(self) -> list[str]:
+        return [item.strip() for item in self.image_provider_fallbacks.split(",") if item.strip()]
 
 
 settings = Settings()

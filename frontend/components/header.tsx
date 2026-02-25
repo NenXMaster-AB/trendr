@@ -16,6 +16,8 @@ export function Header() {
           <Link className="hover:text-zinc-100" href="/dashboard">Dashboard</Link>
           <Link className="hover:text-zinc-100" href="/templates">Templates</Link>
           <Link className="hover:text-zinc-100" href="/workflows">Workflows</Link>
+          <Link className="hover:text-zinc-100" href="/schedule">Schedule</Link>
+          <Link className="hover:text-zinc-100" href="/analytics">Analytics</Link>
           <Link className="hover:text-zinc-100" href="/providers">Providers</Link>
           <a className="hover:text-zinc-100" href="http://localhost:8000/docs" target="_blank" rel="noreferrer">API</a>
         </nav>

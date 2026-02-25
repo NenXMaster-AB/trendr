@@ -23,6 +23,11 @@ def text_fallback_chain(*, preferred: str | None = None) -> list[str]:
     return _normalize_chain(chain)
 
 
+def image_fallback_chain(*, preferred: str | None = None) -> list[str]:
+    chain = [preferred or settings.image_provider_default, *settings.image_provider_fallback_list]
+    return _normalize_chain(chain)
+
+
 async def generate_text(
     *,
     prompt: str,
@@ -50,3 +55,32 @@ async def generate_text(
 
     detail = "; ".join(errors) if errors else "no providers configured"
     raise RuntimeError(f"All text providers failed: {detail}")
+
+
+async def generate_image(
+    *,
+    prompt: str,
+    size: str = "1024x1024",
+    meta: dict[str, Any],
+    preferred_provider: str | None = None,
+) -> dict[str, Any]:
+    errors: list[str] = []
+
+    for provider_name in image_fallback_chain(preferred=preferred_provider):
+        try:
+            provider = registry.get_image(provider_name)
+        except KeyError as exc:
+            errors.append(f"{provider_name}: {exc}")
+            continue
+
+        if not provider.is_available(meta=meta):
+            errors.append(f"{provider_name}: unavailable (missing credentials/config)")
+            continue
+
+        try:
+            return await provider.generate_image(prompt=prompt, size=size, meta=meta)
+        except Exception as exc:
+            errors.append(f"{provider_name}: {exc.__class__.__name__}: {exc}")
+
+    detail = "; ".join(errors) if errors else "no image providers configured"
+    raise RuntimeError(f"All image providers failed: {detail}")

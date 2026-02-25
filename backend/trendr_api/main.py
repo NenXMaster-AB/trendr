@@ -11,6 +11,7 @@ from .config import settings
 from .db import wait_for_db
 from .observability import clear_request_id, configure_logging, set_request_id
 from .plugins.providers import register_all
+from .services.s3 import ensure_bucket
 
 from .api.health import router as health_router
 from .api.projects import router as projects_router
@@ -22,6 +23,9 @@ from .api.templates import router as templates_router
 from .api.workflows import router as workflows_router
 from .api.providers import router as providers_router
 from .api.provider_settings import router as provider_settings_router
+from .api.media import router as media_router
+from .api.schedule import router as schedule_router
+from .api.analytics import router as analytics_router
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -76,6 +80,7 @@ async def request_context_middleware(request: Request, call_next):
 def on_startup():
     wait_for_db()
     register_all()
+    ensure_bucket()
 
 app.include_router(health_router, prefix=settings.api_prefix)
 app.include_router(projects_router, prefix=settings.api_prefix)
@@ -87,3 +92,6 @@ app.include_router(templates_router, prefix=settings.api_prefix)
 app.include_router(workflows_router, prefix=settings.api_prefix)
 app.include_router(providers_router, prefix=settings.api_prefix)
 app.include_router(provider_settings_router, prefix=settings.api_prefix)
+app.include_router(media_router, prefix=settings.api_prefix)
+app.include_router(schedule_router, prefix=settings.api_prefix)
+app.include_router(analytics_router, prefix=settings.api_prefix)

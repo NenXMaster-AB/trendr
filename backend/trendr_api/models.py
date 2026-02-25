@@ -95,6 +95,32 @@ class Workflow(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
+class ScheduledPost(SQLModel, table=True):
+    __tablename__ = "scheduled_post"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    workspace_id: int = Field(foreign_key="workspace.id", index=True)
+    project_id: Optional[int] = Field(default=None, foreign_key="project.id")
+    artifact_id: Optional[int] = Field(default=None, foreign_key="artifact.id")
+    platform: str = "twitter"
+    title: str = ""
+    content: str = ""
+    scheduled_at: datetime = Field(default_factory=datetime.utcnow)
+    status: str = "draft"  # draft|scheduled|ready|sent|failed|cancelled
+    meta: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class Event(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    workspace_id: int = Field(foreign_key="workspace.id", index=True)
+    project_id: Optional[int] = Field(default=None, foreign_key="project.id")
+    kind: str = Field(index=True)  # job_completed|artifact_created|media_generated
+    meta: Dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 class ProviderCredential(SQLModel, table=True):
     __table_args__ = (
         UniqueConstraint(
